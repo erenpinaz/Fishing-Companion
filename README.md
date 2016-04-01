@@ -1,3 +1,3 @@
 # Fishing-Companion
 
-Fishing automation for World of Warcraft.
+Fishing automation for World of Warcraft
