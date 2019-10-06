@@ -14,8 +14,10 @@ namespace FishingCompanion
         private static Process _gameProcess;
         private static IntPtr _hWnd;
 
-        private static int _baitDuration = 300;
-        private static int _fishingDuration = 21;
+        private static bool _baitEnabled = false;
+        private static int _baitDuration = 600;
+        private static int _fishingDuration = 30;
+        private static int _splashThreshold = 13;
 
         private static MMDeviceEnumerator _devEnum;
         private static MMDevice _device;
@@ -24,6 +26,21 @@ namespace FishingCompanion
 
         private static void Main(string[] args)
         {
+            Console.Write("[Initialization] Splash sound threshold: ");
+            _splashThreshold = int.Parse(Console.ReadLine());
+
+            Console.Write("[Initialization] Enter fishing cast time (seconds): ");
+            _fishingDuration = int.Parse(Console.ReadLine());
+
+            Console.Write("[Initialization] Bait enabled? (y/n): ");
+            _baitEnabled = Console.ReadLine() == "y" ? true : false;
+
+            if (_baitEnabled)
+            {
+                Console.Write("[Initialization] Enter bait duration (seconds): ");
+                _baitDuration = int.Parse(Console.ReadLine());
+            }
+
             Console.WriteLine("[Initialization] -> Searching game process");
 
             // Get the game process (32-bit)
@@ -104,7 +121,7 @@ namespace FishingCompanion
         /// </summary>
         private static async void StartFishing()
         {
-            Task.Factory.StartNew(CastBaitTask);
+            _ = Task.Factory.StartNew(CastBaitTask);
 
             while (true)
             {
@@ -133,10 +150,10 @@ namespace FishingCompanion
 
             // Calculate scanning area
             var wowRect = Win32.GetWindowRect(_hWnd);
-            var xMin = wowRect.Right/4;
-            var xMax = xMin*3;
-            var yMin = wowRect.Bottom/3;
-            var yMax = yMin*2;
+            var xMin = wowRect.Right / 4;
+            var xMax = xMin * 3;
+            var yMin = wowRect.Bottom / 3;
+            var yMax = yMin * 2;
 
             // Scan for bobber
             Console.WriteLine("[Procedure Manager] -> Scanning for bobber (Scan area x: [" + xMin + "-" + xMax +
@@ -201,7 +218,7 @@ namespace FishingCompanion
 
             while (true)
             {
-                var currentVol = Convert.ToInt32(_session.AudioMeterInformation.MasterPeakValue*100);
+                var currentVol = Convert.ToInt32(_session.AudioMeterInformation.MasterPeakValue * 100);
                 VolumeQueue.Enqueue(currentVol);
 
                 if (VolumeQueue.Count > 5)
@@ -209,7 +226,7 @@ namespace FishingCompanion
                     VolumeQueue.Dequeue();
                 }
 
-                if (currentVol - Convert.ToInt32(VolumeQueue.Sum()/VolumeQueue.Count()) >= 13)
+                if (currentVol - Convert.ToInt32(VolumeQueue.Sum() / VolumeQueue.Count()) >= _splashThreshold)
                 {
                     Console.WriteLine("[Audio Manager] -> Splash sound heard");
 
